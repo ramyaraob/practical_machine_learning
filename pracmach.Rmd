@@ -1,0 +1,123 @@
+---
+title: "Course project Practical Machine Learning"
+author: "Ramya Rao"
+date: "Thursday, September 24, 2015"
+output: html_document
+pandoc_args: [
+      "+RTS", "-K64m",
+      "-RTS"
+    ]
+---
+### Problem context
+
+The goal of the project is to predict the manner in which users did the exercise. This is the "classe" variable in the training set. 
+Check the course website for the complete problem context.
+
+###Load data
+
+Download the training and evaluation data from the below location.
+```{r, warning=FALSE}
+download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile = "./pml-training.csv")
+download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", destfile = "./pml-testing.csv")
+
+trainData = read.csv("pml-training.csv", na.strings=c("", "NA", "NULL"))
+evalData = read.csv("pml-testing.csv", na.strings=c("", "NA", "NULL"))
+```
+
+###Prepare data for consumption
+We will consider only the trainData for predicting. 
+
+We can see that this dataset has the following number of rows and columns.
+```{r, warning=FALSE}
+dim(trainData)
+```
+Not all of the columns or predictors truly influence the prediction model, hence we reduce the number of columns/predictors.
+Remove columns with empty values
+```{r , warning=FALSE}
+trainNonEmpty <- trainData[ , colSums(is.na(trainData)) == 0]
+```
+Remove columns with near zero variance
+```{r, warning=FALSE}
+library(caret)
+zv <- nearZeroVar(trainNonEmpty[sapply(trainNonEmpty, is.numeric)], saveMetrics=TRUE)
+trainNonZV<-trainNonEmpty[,zv[, 'nzv']==0]
+```
+Remove columns that do not have any impact on the prediction model
+```{r, warning=FALSE}
+nonPredictCols = c( "X","user_name","raw_timestamp_part_1","raw_timestamp_part_2","cvtd_timestamp","new_window","num_window")
+trainNonPred = trainNonZV[,-which(names(trainNonZV)%in%nonPredictCols)]
+```
+Remove columns with high correlation
+```{r, warning=FALSE}
+correlations <- cor(na.omit(trainNonPred[sapply(trainNonPred, is.numeric)]))
+corrCols = findCorrelation(correlations, cutoff = .90, verbose = TRUE)
+trainNoCor = trainNonPred[,-corrCols]
+```
+From the above we see that our training data has been trimmed to te following number of rows and columns.
+```{r, warning=FALSE}
+dim(trainNoCor)
+```
+
+###Sampling data
+
+Split the training data into training and testing subsets, the training subset will be used to train models, while the testing subset will be used to validate the model and compare to other methods.
+
+```{r, warning=FALSE}
+tempTrain <- createDataPartition(y=trainNoCor$classe, p=0.7, list=FALSE)
+
+forTraining <- trainNoCor[tempTrain,]; 
+forTesting <- trainNoCor[-tempTrain,]
+dim(forTraining);dim(forTesting)
+```
+###Prediction and cross validation.
+
+We will consider three learning methods for analysis - Tree, Recursive partioning and Random forests.
+
+####Tree 
+
+```{r, warning=FALSE}
+library(tree)
+set.seed(12345)
+treetraining=tree(classe~.,data=forTraining)
+summary(treetraining)
+
+plot(treetraining)
+text(treetraining,pretty=0, cex =.4)
+
+treepred=predict(treetraining,forTesting,type="class")
+confusionMatrix(treepred, forTesting$classe)
+```
+####Recursive partitioning
+
+```{r, warning=FALSE}
+
+rpartModel <- train(classe ~ .,method="rpart",data=forTraining)
+plot(rpartModel$finalModel)
+text(rpartModel$finalModel,pretty=0, cex =.8)
+```
+
+```{r, warning=FALSE}
+rpartpred=predict(rpartModel$finalModel, forTesting, type="class")
+confusionMatrix(rpartpred, forTesting$classe)
+```
+
+####Random forest
+
+```{r, warning=FALSE}
+require(randomForest)
+set.seed(12345)
+
+rfTraining=randomForest(classe~.,data=forTraining,ntree=100, importance=TRUE)
+summary(rfTraining)
+rfpred <- predict(rfTraining, forTesting,type="class")
+confusionMatrix(rfpred, forTesting$classe)
+```
+
+###Conclusion
+Comparing the accuracy of the above three methods. We see that the tree, rpart and randm trees have accuracies of 64%, 49% and 99% respectively. From this we can infer that random forest is the best analysis method for this data, though 99% is too much on the higher side and may indicate over fitting.
+
+Below is the prediction applied to the test\evaldata set.
+```{r,warning=FALSE}
+finalAnswers <- predict(rfTraining, evalData)
+finalAnswers
+```
