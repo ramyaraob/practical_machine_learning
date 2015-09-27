@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Course project Practical Machine Learning by ramyaraob</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Course project Practical Machine Learning</h1>
+      <h2 class="project-tagline"></h2>
+      <a href="https://github.com/ramyaraob/practical_machine_learning" class="btn">View on GitHub</a>
+      <a href="https://github.com/ramyaraob/practical_machine_learning/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/ramyaraob/practical_machine_learning/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h3>
+<a id="author-ramya-rao" class="anchor" href="#author-ramya-rao" aria-hidden="true"><span class="octicon octicon-link"></span></a>Author: "Ramya Rao"</h3>
+
+<h3>
+<a id="date-thursday-september-24-2015" class="anchor" href="#date-thursday-september-24-2015" aria-hidden="true"><span class="octicon octicon-link"></span></a>Date: "Thursday, September 24, 2015"</h3>
+
+<h3>
+<a id="problem-context" class="anchor" href="#problem-context" aria-hidden="true"><span class="octicon octicon-link"></span></a>Problem context</h3>
+
+<p>The goal of the project is to predict the manner in which users did the exercise. This is the "classe" variable in the training set. 
+Check the course website for the complete problem context.</p>
+
+<h3>
+<a id="load-data" class="anchor" href="#load-data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Load data</h3>
+
+<p>Download the training and evaluation data from the below location.</p>
+
+<div class="highlight highlight-source-r"><pre>download.file(<span class="pl-s"><span class="pl-pds">"</span>http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv<span class="pl-pds">"</span></span>, <span class="pl-v">destfile</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>./pml-training.csv<span class="pl-pds">"</span></span>)
+download.file(<span class="pl-s"><span class="pl-pds">"</span>http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv<span class="pl-pds">"</span></span>, <span class="pl-v">destfile</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>./pml-testing.csv<span class="pl-pds">"</span></span>)
+
+<span class="pl-v">trainData</span> <span class="pl-k">=</span> read.csv(<span class="pl-s"><span class="pl-pds">"</span>pml-training.csv<span class="pl-pds">"</span></span>, <span class="pl-v">na.strings</span><span class="pl-k">=</span>c(<span class="pl-s"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>NA<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>NULL<span class="pl-pds">"</span></span>))
+<span class="pl-v">evalData</span> <span class="pl-k">=</span> read.csv(<span class="pl-s"><span class="pl-pds">"</span>pml-testing.csv<span class="pl-pds">"</span></span>, <span class="pl-v">na.strings</span><span class="pl-k">=</span>c(<span class="pl-s"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>NA<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>NULL<span class="pl-pds">"</span></span>))</pre></div>
+
+<h3>
+<a id="prepare-data-for-consumption" class="anchor" href="#prepare-data-for-consumption" aria-hidden="true"><span class="octicon octicon-link"></span></a>Prepare data for consumption</h3>
+
+<p>We will consider only the trainData for predicting. </p>
+
+<p>We can see that this dataset has the following number of rows and columns.</p>
+
+<div class="highlight highlight-source-r"><pre>dim(<span class="pl-smi">trainData</span>)</pre></div>
+
+<p>Not all of the columns or predictors truly influence the prediction model, hence we reduce the number of columns/predictors.
+Remove columns with empty values</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">trainNonEmpty</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">trainData</span>[ , colSums(is.na(<span class="pl-smi">trainData</span>)) <span class="pl-k">==</span> <span class="pl-c1">0</span>]</pre></div>
+
+<p>Remove columns with near zero variance</p>
+
+<div class="highlight highlight-source-r"><pre>library(<span class="pl-smi">caret</span>)
+<span class="pl-smi">zv</span> <span class="pl-k">&lt;-</span> nearZeroVar(<span class="pl-smi">trainNonEmpty</span>[sapply(<span class="pl-smi">trainNonEmpty</span>, <span class="pl-smi">is.numeric</span>)], <span class="pl-v">saveMetrics</span><span class="pl-k">=</span><span class="pl-c1">TRUE</span>)
+<span class="pl-smi">trainNonZV</span><span class="pl-k">&lt;-</span><span class="pl-smi">trainNonEmpty</span>[,<span class="pl-smi">zv</span>[, <span class="pl-s"><span class="pl-pds">'</span>nzv<span class="pl-pds">'</span></span>]<span class="pl-k">==</span><span class="pl-c1">0</span>]</pre></div>
+
+<p>Remove columns that do not have any impact on the prediction model</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-v">nonPredictCols</span> <span class="pl-k">=</span> c( <span class="pl-s"><span class="pl-pds">"</span>X<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>user_name<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>raw_timestamp_part_1<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>raw_timestamp_part_2<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>cvtd_timestamp<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>new_window<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>num_window<span class="pl-pds">"</span></span>)
+<span class="pl-v">trainNonPred</span> <span class="pl-k">=</span> <span class="pl-smi">trainNonZV</span>[,<span class="pl-k">-</span>which(names(<span class="pl-smi">trainNonZV</span>)<span class="pl-k">%in%</span><span class="pl-smi">nonPredictCols</span>)]</pre></div>
+
+<p>Remove columns with high correlation</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">correlations</span> <span class="pl-k">&lt;-</span> cor(na.omit(<span class="pl-smi">trainNonPred</span>[sapply(<span class="pl-smi">trainNonPred</span>, <span class="pl-smi">is.numeric</span>)]))
+<span class="pl-v">corrCols</span> <span class="pl-k">=</span> findCorrelation(<span class="pl-smi">correlations</span>, <span class="pl-v">cutoff</span> <span class="pl-k">=</span> .<span class="pl-c1">90</span>, <span class="pl-v">verbose</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>)
+<span class="pl-v">trainNoCor</span> <span class="pl-k">=</span> <span class="pl-smi">trainNonPred</span>[,<span class="pl-k">-</span><span class="pl-smi">corrCols</span>]</pre></div>
+
+<p>From the above we see that our training data has been trimmed to te following number of rows and columns.</p>
+
+<div class="highlight highlight-source-r"><pre>dim(<span class="pl-smi">trainNoCor</span>)</pre></div>
+
+<h3>
+<a id="sampling-data" class="anchor" href="#sampling-data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sampling data</h3>
+
+<p>Split the training data into training and testing subsets, the training subset will be used to train models, while the testing subset will be used to validate the model and compare to other methods.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">tempTrain</span> <span class="pl-k">&lt;-</span> createDataPartition(<span class="pl-v">y</span><span class="pl-k">=</span><span class="pl-smi">trainNoCor</span><span class="pl-k">$</span><span class="pl-smi">classe</span>, <span class="pl-v">p</span><span class="pl-k">=</span><span class="pl-c1">0.7</span>, <span class="pl-v">list</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>)
+
+<span class="pl-smi">forTraining</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">trainNoCor</span>[<span class="pl-smi">tempTrain</span>,]; 
+<span class="pl-smi">forTesting</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">trainNoCor</span>[<span class="pl-k">-</span><span class="pl-smi">tempTrain</span>,]
+dim(<span class="pl-smi">forTraining</span>);dim(<span class="pl-smi">forTesting</span>)</pre></div>
+
+<h3>
+<a id="prediction-and-cross-validation" class="anchor" href="#prediction-and-cross-validation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Prediction and cross validation.</h3>
+
+<p>We will consider three learning methods for analysis - Tree, Recursive partioning and Random forests.</p>
+
+<h4>
+<a id="tree" class="anchor" href="#tree" aria-hidden="true"><span class="octicon octicon-link"></span></a>Tree</h4>
+
+<div class="highlight highlight-source-r"><pre>library(<span class="pl-smi">tree</span>)
+set.seed(<span class="pl-c1">12345</span>)
+<span class="pl-v">treetraining</span><span class="pl-k">=</span>tree(<span class="pl-smi">classe</span><span class="pl-k">~</span>.,<span class="pl-v">data</span><span class="pl-k">=</span><span class="pl-smi">forTraining</span>)
+summary(<span class="pl-smi">treetraining</span>)
+
+plot(<span class="pl-smi">treetraining</span>)
+text(<span class="pl-smi">treetraining</span>,<span class="pl-v">pretty</span><span class="pl-k">=</span><span class="pl-c1">0</span>, <span class="pl-v">cex</span> <span class="pl-k">=</span>.<span class="pl-c1">4</span>)
+
+<span class="pl-v">treepred</span><span class="pl-k">=</span>predict(<span class="pl-smi">treetraining</span>,<span class="pl-smi">forTesting</span>,<span class="pl-v">type</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>class<span class="pl-pds">"</span></span>)
+confusionMatrix(<span class="pl-smi">treepred</span>, <span class="pl-smi">forTesting</span><span class="pl-k">$</span><span class="pl-smi">classe</span>)</pre></div>
+
+<h4>
+<a id="recursive-partitioning" class="anchor" href="#recursive-partitioning" aria-hidden="true"><span class="octicon octicon-link"></span></a>Recursive partitioning</h4>
+
+<div class="highlight highlight-source-r"><pre>
+<span class="pl-smi">rpartModel</span> <span class="pl-k">&lt;-</span> train(<span class="pl-smi">classe</span> <span class="pl-k">~</span> .,<span class="pl-v">method</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>rpart<span class="pl-pds">"</span></span>,<span class="pl-v">data</span><span class="pl-k">=</span><span class="pl-smi">forTraining</span>)
+plot(<span class="pl-smi">rpartModel</span><span class="pl-k">$</span><span class="pl-smi">finalModel</span>)
+text(<span class="pl-smi">rpartModel</span><span class="pl-k">$</span><span class="pl-smi">finalModel</span>,<span class="pl-v">pretty</span><span class="pl-k">=</span><span class="pl-c1">0</span>, <span class="pl-v">cex</span> <span class="pl-k">=</span>.<span class="pl-c1">8</span>)</pre></div>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-v">rpartpred</span><span class="pl-k">=</span>predict(<span class="pl-smi">rpartModel</span><span class="pl-k">$</span><span class="pl-smi">finalModel</span>, <span class="pl-smi">forTesting</span>, <span class="pl-v">type</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>class<span class="pl-pds">"</span></span>)
+confusionMatrix(<span class="pl-smi">rpartpred</span>, <span class="pl-smi">forTesting</span><span class="pl-k">$</span><span class="pl-smi">classe</span>)</pre></div>
+
+<h4>
+<a id="random-forest" class="anchor" href="#random-forest" aria-hidden="true"><span class="octicon octicon-link"></span></a>Random forest</h4>
+
+<div class="highlight highlight-source-r"><pre>require(<span class="pl-smi">randomForest</span>)
+set.seed(<span class="pl-c1">12345</span>)
+
+<span class="pl-v">rfTraining</span><span class="pl-k">=</span>randomForest(<span class="pl-smi">classe</span><span class="pl-k">~</span>.,<span class="pl-v">data</span><span class="pl-k">=</span><span class="pl-smi">forTraining</span>,<span class="pl-v">ntree</span><span class="pl-k">=</span><span class="pl-c1">100</span>, <span class="pl-v">importance</span><span class="pl-k">=</span><span class="pl-c1">TRUE</span>)
+summary(<span class="pl-smi">rfTraining</span>)
+<span class="pl-smi">rfpred</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-smi">rfTraining</span>, <span class="pl-smi">forTesting</span>,<span class="pl-v">type</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>class<span class="pl-pds">"</span></span>)
+confusionMatrix(<span class="pl-smi">rfpred</span>, <span class="pl-smi">forTesting</span><span class="pl-k">$</span><span class="pl-smi">classe</span>)</pre></div>
+
+<h3>
+<a id="conclusion" class="anchor" href="#conclusion" aria-hidden="true"><span class="octicon octicon-link"></span></a>Conclusion</h3>
+
+<p>Comparing the accuracy of the above three methods. We see that the tree, rpart and randm trees have accuracies of 64%, 49% and 99% respectively. From this we can infer that random forest is the best analysis method for this data, though 99% is too much on the higher side and may indicate over fitting.</p>
+
+<p>Below is the prediction applied to the test\evaldata set.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">finalAnswers</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-smi">rfTraining</span>, <span class="pl-smi">evalData</span>)
+<span class="pl-smi">finalAnswers</span></pre></div>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/ramyaraob/practical_machine_learning">Course project Practical Machine Learning</a> is maintained by <a href="https://github.com/ramyaraob">ramyaraob</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
